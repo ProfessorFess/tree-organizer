@@ -1,0 +1,1 @@
+For TS definitions that match the database tables in Supabase.
