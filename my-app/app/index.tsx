@@ -4,6 +4,7 @@ import { TopBar } from '../components/TopBar';
 import { Sidebar } from '../components/Sidebar';
 import { Workspace } from '../components/Workspace';
 import { CreateNodeModal } from '../components/CreateNodeModal';
+import { EditNodeModal } from '../components/EditNodeModal';
 import { nodeService } from '../services/nodeService';
 import { Node } from '../types/database';
 
@@ -14,6 +15,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingNode, setEditingNode] = useState<Node | null>(null);
 
   useEffect(() => {
     async function loadTree() {
@@ -32,6 +34,18 @@ export default function HomeScreen() {
   const handleNodeCreated = (newNode: Node) => {
     setNodes((prev) => [...prev, newNode]);
     setShowCreateModal(false);
+  };
+
+  const handleNodeUpdated = (updatedNode: Node) => {
+    setNodes((prev) =>
+      prev.map((n) => (n.id === updatedNode.id ? updatedNode : n))
+    );
+    setEditingNode(null);
+  };
+
+  const handleNodeDeleted = (nodeId: string) => {
+    setNodes((prev) => prev.filter((n) => n.id !== nodeId));
+    setEditingNode(null);
   };
 
   if (loading) {
@@ -56,6 +70,7 @@ export default function HomeScreen() {
         <Workspace
           nodes={nodes}
           onPlusPress={() => setShowCreateModal(true)}
+          onNodePress={(node) => setEditingNode(node)}
         />
       </View>
 
@@ -64,6 +79,13 @@ export default function HomeScreen() {
         projectId={PROJECT_ID}
         onClose={() => setShowCreateModal(false)}
         onCreated={handleNodeCreated}
+      />
+
+      <EditNodeModal
+        node={editingNode}
+        onClose={() => setEditingNode(null)}
+        onUpdated={handleNodeUpdated}
+        onDeleted={handleNodeDeleted}
       />
     </View>
   );

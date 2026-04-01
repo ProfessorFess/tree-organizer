@@ -1,4 +1,5 @@
-import { StyleSheet, View, Pressable, Platform } from 'react-native';
+import { StyleSheet, View, Pressable, Platform, LayoutChangeEvent } from 'react-native';
+import { useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { NodeCircle } from './NodeCircle';
 import { Node } from '../types/database';
@@ -6,7 +7,10 @@ import { Node } from '../types/database';
 type WorkspaceProps = {
   nodes: Node[];
   onPlusPress: () => void;
+  onNodePress: (node: Node) => void;
 };
+
+type Bounds = { width: number; height: number };
 
 function getNodePosition(index: number, total: number) {
   const cols = Math.ceil(Math.sqrt(total));
@@ -31,16 +35,26 @@ const dotBackground = Platform.select({
   default: {},
 });
 
-export function Workspace({ nodes, onPlusPress }: WorkspaceProps) {
+export function Workspace({ nodes, onPlusPress, onNodePress }: WorkspaceProps) {
+  const [bounds, setBounds] = useState<Bounds>({ width: 0, height: 0 });
+
+  const handleLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setBounds({ width, height });
+  };
+
   return (
-    <View style={[styles.container, dotBackground]}>
+    <View style={[styles.container, dotBackground]} onLayout={handleLayout}>
       {nodes.map((node, i) => {
         const pos = getNodePosition(i, nodes.length);
         return (
           <NodeCircle
             key={node.id}
             node={node}
-            style={{ position: 'absolute', left: pos.left, top: pos.top }}
+            initialX={pos.left}
+            initialY={pos.top}
+            bounds={bounds}
+            onPress={() => onNodePress(node)}
           />
         );
       })}

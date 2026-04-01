@@ -33,5 +33,28 @@ export const nodeService = {
       .eq('id', nodeId);
 
     if (error) throw error;
-  }
+  },
+
+  // Update any editable fields on a node
+  async updateNode(nodeId: string, updates: Partial<Omit<Node, 'id' | 'project_id'>>) {
+    const { data, error } = await supabase
+      .from('nodes')
+      .update(updates)
+      .eq('id', nodeId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Node;
+  },
+
+  // Permanently delete a node
+  async deleteNode(nodeId: string) {
+    const { error } = await supabase
+      .from('nodes')
+      .delete()
+      .eq('id', nodeId);
+
+    if (error) throw error;
+  },
 };
