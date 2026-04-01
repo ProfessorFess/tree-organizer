@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, FlatList, ActivityIndicator, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { nodeService } from '../../services/nodeService';
-import { Node } from '../../types/database';
+import { nodeService } from '../services/nodeService';
+import { Node } from '../types/database';
 
 // Your actual Supabase Project ID
 const TEST_PROJECT_ID = 'dde69e85-3148-4a77-9ade-49036075a699';
