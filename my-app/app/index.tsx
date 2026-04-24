@@ -6,12 +6,14 @@ import { Workspace } from '../components/Workspace';
 import { CreateNodeModal } from '../components/CreateNodeModal';
 import { EditNodeModal } from '../components/EditNodeModal';
 import { nodeService } from '../services/nodeService';
+import { projectService } from '../services/projectService';
 import { Node } from '../types/database';
 
 const PROJECT_ID = 'dde69e85-3148-4a77-9ade-49036075a699';
 
 export default function HomeScreen() {
   const [nodes, setNodes] = useState<Node[]>([]);
+  const [projectName, setProjectName] = useState('Project');
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -20,8 +22,12 @@ export default function HomeScreen() {
   useEffect(() => {
     async function loadTree() {
       try {
-        const data = await nodeService.getNodesByProject(PROJECT_ID);
-        setNodes(data);
+        const [nodesData, project] = await Promise.all([
+          nodeService.getNodesByProject(PROJECT_ID),
+          projectService.getProject(PROJECT_ID).catch(() => null),
+        ]);
+        setNodes(nodesData);
+        if (project?.name) setProjectName(project.name);
       } catch (e) {
         console.error(e);
       } finally {
@@ -30,6 +36,11 @@ export default function HomeScreen() {
     }
     loadTree();
   }, []);
+
+  const handleProjectNameCommit = async (name: string) => {
+    const updated = await projectService.updateProjectName(PROJECT_ID, name);
+    setProjectName(updated.name);
+  };
 
   const handleNodeCreated = (newNode: Node) => {
     setNodes((prev) => [...prev, newNode]);
@@ -58,7 +69,10 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.root}>
-      <TopBar />
+      <TopBar
+        projectName={projectName}
+        onProjectNameCommit={handleProjectNameCommit}
+      />
 
       <View style={styles.body}>
         <Sidebar

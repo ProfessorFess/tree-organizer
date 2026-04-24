@@ -1,3 +1,8 @@
+export type Project = {
+  id: string;
+  name: string;
+};
+
 export type Node = {
     id: string;
     project_id: string;
