@@ -11,49 +11,54 @@ import { ThemedText } from './themed-text';
 import { nodeService } from '../services/nodeService';
 import { Node } from '../types/database';
 
-type NodeType = Node['node_type'];
 type NodeStatus = Node['status'];
 
-const NODE_TYPES: NodeType[] = ['ROOT', 'TEAM', 'PERSON'];
 const STATUSES: NodeStatus[] = ['active', 'stuck', 'completed'];
 
 type EditNodeModalProps = {
   node: Node | null;
+  projectName: string;
+  hubNodeId: string | null;
   onClose: () => void;
   onUpdated: (node: Node) => void;
-  onDeleted: (nodeId: string) => void;
+  onDeleted: () => void;
 };
 
 export function EditNodeModal({
   node,
+  projectName,
+  hubNodeId,
   onClose,
   onUpdated,
   onDeleted,
 }: EditNodeModalProps) {
   const [label, setLabel] = useState('');
-  const [nodeType, setNodeType] = useState<NodeType>('PERSON');
-  const [jobPosition, setJobPosition] = useState('');
   const [status, setStatus] = useState<NodeStatus>('active');
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Populate form whenever the target node changes
+  const isRoot = !!node && !!hubNodeId && node.id === hubNodeId;
+
   useEffect(() => {
-    if (node) {
-      setLabel(node.label);
-      setNodeType(node.node_type);
-      setJobPosition(node.job_position ?? '');
-      setStatus(node.status);
-      setError(null);
-      setConfirmDelete(false);
+    if (!node) {
+      setDeleting(false);
+      setSubmitting(false);
+      return;
     }
-  }, [node]);
+    const hub = !!hubNodeId && node.id === hubNodeId;
+    setLabel(hub ? projectName : node.label);
+    setStatus(node.status);
+    setError(null);
+    setConfirmDelete(false);
+    setDeleting(false);
+    setSubmitting(false);
+  }, [node, projectName, hubNodeId]);
 
   const handleSave = async () => {
     if (!node) return;
-    if (!label.trim()) {
+    if (!isRoot && !label.trim()) {
       setError('Label is required');
       return;
     }
@@ -62,12 +67,11 @@ export function EditNodeModal({
     setError(null);
 
     try {
-      const updated = await nodeService.updateNode(node.id, {
-        label: label.trim(),
-        node_type: nodeType,
-        status,
-        job_position: jobPosition.trim() || undefined,
-      });
+      const payload: Partial<Omit<Node, 'id' | 'project_id'>> = { status };
+      if (!isRoot) {
+        payload.label = label.trim();
+      }
+      const updated = await nodeService.updateNode(node.id, payload);
       onUpdated(updated);
     } catch (e: any) {
       setError(e.message || 'Failed to save changes');
@@ -89,10 +93,12 @@ export function EditNodeModal({
 
     try {
       await nodeService.deleteNode(node.id);
-      onDeleted(node.id);
+      onDeleted();
     } catch (e: any) {
       setError(e.message || 'Failed to delete node');
+    } finally {
       setDeleting(false);
+      setConfirmDelete(false);
     }
   };
 
@@ -111,42 +117,24 @@ export function EditNodeModal({
     >
       <Pressable style={styles.backdrop} onPress={handleClose}>
         <Pressable style={styles.card} onPress={() => {}}>
-          <ThemedText style={styles.title}>Edit Node</ThemedText>
+          <ThemedText style={styles.title}>Edit node</ThemedText>
 
-          <ThemedText style={styles.fieldLabel}>Label *</ThemedText>
+          <ThemedText style={styles.fieldLabel}>
+            {isRoot ? 'Project name' : 'Label *'}
+          </ThemedText>
           <TextInput
-            style={styles.input}
+            style={[styles.input, isRoot && styles.inputReadonly]}
             value={label}
             onChangeText={setLabel}
-            placeholder="e.g. John Doe"
+            placeholder="e.g. Planning"
             placeholderTextColor="#71717a"
+            editable={!isRoot}
           />
-
-          <ThemedText style={styles.fieldLabel}>Type</ThemedText>
-          <View style={styles.chipRow}>
-            {NODE_TYPES.map((t) => (
-              <Pressable
-                key={t}
-                style={[styles.chip, nodeType === t && styles.chipActive]}
-                onPress={() => setNodeType(t)}
-              >
-                <ThemedText
-                  style={[styles.chipText, nodeType === t && styles.chipTextActive]}
-                >
-                  {t}
-                </ThemedText>
-              </Pressable>
-            ))}
-          </View>
-
-          <ThemedText style={styles.fieldLabel}>Job Position</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={jobPosition}
-            onChangeText={setJobPosition}
-            placeholder="e.g. Engineer"
-            placeholderTextColor="#71717a"
-          />
+          {isRoot && (
+            <ThemedText style={styles.hint}>
+              Edit the title in the top bar to rename the project.
+            </ThemedText>
+          )}
 
           <ThemedText style={styles.fieldLabel}>Status</ThemedText>
           <View style={styles.chipRow}>
@@ -168,23 +156,27 @@ export function EditNodeModal({
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
           <View style={styles.actions}>
-            <Pressable
-              style={[
-                styles.deleteButton,
-                confirmDelete && styles.deleteButtonConfirm,
-                (deleting) && { opacity: 0.6 },
-              ]}
-              onPress={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <ThemedText style={styles.deleteText}>
-                  {confirmDelete ? 'Confirm Delete' : 'Delete'}
-                </ThemedText>
-              )}
-            </Pressable>
+            {!isRoot ? (
+              <Pressable
+                style={[
+                  styles.deleteButton,
+                  confirmDelete && styles.deleteButtonConfirm,
+                  deleting && { opacity: 0.6 },
+                ]}
+                onPress={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ThemedText style={styles.deleteText}>
+                    {confirmDelete ? 'Confirm Delete' : 'Delete'}
+                  </ThemedText>
+                )}
+              </Pressable>
+            ) : (
+              <View />
+            )}
 
             <View style={styles.rightActions}>
               <Pressable style={styles.cancelButton} onPress={handleClose}>
@@ -247,6 +239,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: '#e4e4e7',
     fontSize: 14,
+  },
+  inputReadonly: {
+    opacity: 0.85,
+    color: '#a1a1aa',
+  },
+  hint: {
+    color: '#71717a',
+    fontSize: 12,
+    marginTop: 8,
+    lineHeight: 18,
   },
   chipRow: {
     flexDirection: 'row',

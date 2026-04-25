@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { StyleSheet, View, Pressable, ScrollView } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -6,16 +7,28 @@ import Animated, {
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from './themed-text';
 import { Node } from '../types/database';
+import { flattenTreePreOrder, getRootNode } from '../lib/tree';
 
 const SIDEBAR_WIDTH = 220;
 
 type SidebarProps = {
   nodes: Node[];
+  projectName: string;
+  rootNodeId?: string;
   isOpen: boolean;
   onToggle: () => void;
 };
 
-export function Sidebar({ nodes, isOpen, onToggle }: SidebarProps) {
+export function Sidebar({ nodes, projectName, rootNodeId, isOpen, onToggle }: SidebarProps) {
+  const orderedNodes = useMemo(() => {
+    const root =
+      (rootNodeId ? nodes.find((n) => n.id === rootNodeId) : null) ?? getRootNode(nodes);
+    if (!root) return nodes;
+    const ordered = flattenTreePreOrder(nodes, root);
+    const seen = new Set(ordered.map((n) => n.id));
+    const rest = nodes.filter((n) => !seen.has(n.id));
+    return [...ordered, ...rest];
+  }, [nodes, rootNodeId]);
   const animatedStyle = useAnimatedStyle(() => ({
     width: withTiming(isOpen ? SIDEBAR_WIDTH : 0, { duration: 250 }),
     overflow: 'hidden' as const,
@@ -25,7 +38,7 @@ export function Sidebar({ nodes, isOpen, onToggle }: SidebarProps) {
     <View style={styles.wrapper}>
       <Animated.View style={[styles.container, animatedStyle]}>
         <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-          {nodes.map((node) => (
+          {orderedNodes.map((node) => (
             <View key={node.id} style={styles.nodeRow}>
               <View
                 style={[
@@ -41,7 +54,7 @@ export function Sidebar({ nodes, isOpen, onToggle }: SidebarProps) {
                 ]}
               />
               <ThemedText style={styles.nodeLabel} numberOfLines={1}>
-                {node.label}
+                {node.id === rootNodeId ? projectName : node.label}
               </ThemedText>
             </View>
           ))}
