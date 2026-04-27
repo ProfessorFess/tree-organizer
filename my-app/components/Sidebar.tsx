@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, Pressable, ScrollView } from 'react-native';
 import Animated, {
   runOnJS,
@@ -17,6 +17,7 @@ type SidebarProps = {
   nodes: Node[];
   projectName: string;
   rootNodeId?: string;
+  statusColorFor: (status: string) => string;
   sidebarWidth: number;
   maxSidebarWidth: number;
   onSidebarWidthChange: (width: number) => void;
@@ -28,12 +29,14 @@ export function Sidebar({
   nodes,
   projectName,
   rootNodeId,
+  statusColorFor,
   sidebarWidth,
   maxSidebarWidth,
   onSidebarWidthChange,
   isOpen,
   onToggle,
 }: SidebarProps) {
+  const [isResizing, setIsResizing] = useState(false);
   const orderedNodes = useMemo(() => {
     const root =
       (rootNodeId ? nodes.find((n) => n.id === rootNodeId) : null) ?? getRootNode(nodes);
@@ -67,21 +70,34 @@ export function Sidebar({
         .enabled(isOpen)
         .onBegin(() => {
           'worklet';
+          runOnJS(setIsResizing)(true);
           runOnJS(refreshWrapperWindowX)();
         })
         .onUpdate((e) => {
           'worklet';
           runOnJS(applySidebarWidth)(e.absoluteX - wrapperWindowXRef.current);
+        })
+        .onFinalize(() => {
+          'worklet';
+          runOnJS(setIsResizing)(false);
         }),
     [applySidebarWidth, isOpen, refreshWrapperWindowX]
   );
 
   const animatedStyle = useAnimatedStyle(() => ({
-    width: isOpen ? sidebarWidth : withTiming(0, { duration: 250 }),
+    width: isOpen
+      ? isResizing
+        ? sidebarWidth
+        : withTiming(sidebarWidth, { duration: 250 })
+      : withTiming(0, { duration: 250 }),
     overflow: 'hidden' as const,
   }));
   const toggleAnimatedStyle = useAnimatedStyle(() => ({
-    left: isOpen ? sidebarWidth - 46 : withTiming(17, { duration: 250 }),
+    left: isOpen
+      ? isResizing
+        ? sidebarWidth - 46
+        : withTiming(sidebarWidth - 46, { duration: 250 })
+      : withTiming(17, { duration: 250 }),
   }));
 
   return (
@@ -94,12 +110,7 @@ export function Sidebar({
                 style={[
                   styles.statusDot,
                   {
-                    backgroundColor:
-                      node.status === 'stuck'
-                        ? '#ef4444'
-                        : node.status === 'completed'
-                        ? '#3b82f6'
-                        : '#10b981',
+                    backgroundColor: statusColorFor(node.status),
                   },
                 ]}
               />

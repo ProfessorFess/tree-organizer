@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   createButton: {
     backgroundColor: '#3b82f6',
     paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingVertical: 7,
     borderRadius: 8,
   },
   createButtonText: {

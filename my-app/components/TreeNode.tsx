@@ -36,18 +36,8 @@ type TreeNodeProps = {
   onTreeDragMove?: (nodeId: string, dx: number, dy: number, absX?: number, absY?: number) => void;
   onTreeDragComplete?: (nodeId: string, dx: number, dy: number, absX?: number, absY?: number) => void;
   onTreeDragClear?: () => void;
+  statusColorFor: (status: string) => string;
 };
-
-function statusColor(status: Node['status']): string {
-  switch (status) {
-    case 'stuck':
-      return '#ef4444';
-    case 'completed':
-      return '#10b981';
-    default:
-      return '#3b82f6';
-  }
-}
 
 export function TreeNode({
   node,
@@ -66,11 +56,12 @@ export function TreeNode({
   onTreeDragMove,
   onTreeDragComplete,
   onTreeDragClear,
+  statusColorFor,
 }: TreeNodeProps) {
   const [pressed, setPressed] = useState(false);
   const hovered = hoveredNodeId === node.id || pressed;
   const label = displayLabel ?? node.label;
-  const baseBorder = statusColor(node.status);
+  const baseBorder = statusColorFor(node.status);
   const borderColor = baseBorder;
 
   const showUp = !isProjectRoot && !!node.parent_node_id;
@@ -90,19 +81,19 @@ export function TreeNode({
   const circleGlow = Platform.select({
     web: {
       boxShadow: hovered
-        ? '0 0 0 1px rgba(96, 165, 250, 0.22), 0 0 22px 6px rgba(59, 130, 246, 0.2)'
-        : '0 0 14px 3px rgba(59, 130, 246, 0.08)',
+        ? `0 0 0 1px ${borderColor}33, 0 0 22px 6px ${borderColor}33`
+        : `0 0 14px 3px ${borderColor}1F`,
     } as any,
     default: hovered
       ? {
-          shadowColor: '#3b82f6',
+          shadowColor: borderColor,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.28,
           shadowRadius: 12,
           elevation: 8,
         }
       : {
-          shadowColor: '#3b82f6',
+          shadowColor: borderColor,
           shadowOffset: { width: 0, height: 0 },
           shadowOpacity: 0.12,
           shadowRadius: 8,

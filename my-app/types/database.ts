@@ -9,7 +9,7 @@ export type Node = {
     parent_node_id: string | null;
     node_type: 'ROOT' | 'TEAM' | 'PERSON';
     label: string;
-    status: 'active' | 'stuck' | 'completed';
+    status: string;
     job_position?: string;
 };
 
