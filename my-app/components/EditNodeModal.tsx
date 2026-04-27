@@ -14,11 +14,10 @@ import type { StatusDefinition } from '../types/status';
 
 type NodeStatus = Node['status'];
 const BASE_STATUS_KEYS = new Set(['active', 'stuck', 'completed']);
+const CONTENT_LEFT_INSET = 2;
 
 type EditNodeModalProps = {
   node: Node | null;
-  projectName: string;
-  hubNodeId: string | null;
   statuses: StatusDefinition[];
   onClose: () => void;
   onUpdated: (node: Node) => void;
@@ -27,8 +26,6 @@ type EditNodeModalProps = {
 
 export function EditNodeModal({
   node,
-  projectName,
-  hubNodeId,
   statuses,
   onClose,
   onUpdated,
@@ -41,26 +38,23 @@ export function EditNodeModal({
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const isRoot = !!node && !!hubNodeId && node.id === hubNodeId;
-
   useEffect(() => {
     if (!node) {
       setDeleting(false);
       setSubmitting(false);
       return;
     }
-    const hub = !!hubNodeId && node.id === hubNodeId;
-    setLabel(hub ? projectName : node.label);
+    setLabel(node.label);
     setStatus(node.status || statuses[0]?.key || 'active');
     setError(null);
     setConfirmDelete(false);
     setDeleting(false);
     setSubmitting(false);
-  }, [node, projectName, hubNodeId, statuses]);
+  }, [node, statuses]);
 
   const handleSave = async () => {
     if (!node) return;
-    if (!isRoot && !label.trim()) {
+    if (!label.trim()) {
       setError('Label is required');
       return;
     }
@@ -70,11 +64,9 @@ export function EditNodeModal({
 
     try {
       const payload: Partial<Omit<Node, 'id' | 'project_id'>> = {
+        label: label.trim(),
         status: (BASE_STATUS_KEYS.has(status) ? status : 'active') as NodeStatus,
       };
-      if (!isRoot) {
-        payload.label = label.trim();
-      }
       const updated = await nodeService.updateNode(node.id, payload);
       onUpdated({ ...updated, status });
     } catch (e: any) {
@@ -121,26 +113,16 @@ export function EditNodeModal({
     >
       <Pressable style={styles.backdrop} onPress={handleClose}>
         <Pressable style={styles.card} onPress={() => {}}>
-          <ThemedText style={styles.title}>Edit node</ThemedText>
-
-          <ThemedText style={styles.fieldLabel}>
-            {isRoot ? 'Project name' : 'Label *'}
-          </ThemedText>
+          <ThemedText style={[styles.fieldLabel, styles.sectionLabel]}>Node Name</ThemedText>
           <TextInput
-            style={[styles.input, isRoot && styles.inputReadonly]}
+            style={styles.input}
             value={label}
             onChangeText={setLabel}
             placeholder="e.g. Planning"
             placeholderTextColor="#71717a"
-            editable={!isRoot}
           />
-          {isRoot && (
-            <ThemedText style={styles.hint}>
-              Edit the title in the top bar to rename the project.
-            </ThemedText>
-          )}
 
-          <ThemedText style={styles.fieldLabel}>Status</ThemedText>
+          <ThemedText style={[styles.fieldLabel, styles.sectionLabel]}>Status</ThemedText>
           <View style={styles.chipRow}>
             {statuses.map((s) => (
               <Pressable
@@ -161,27 +143,23 @@ export function EditNodeModal({
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
           <View style={styles.actions}>
-            {!isRoot ? (
-              <Pressable
-                style={[
-                  styles.deleteButton,
-                  confirmDelete && styles.deleteButtonConfirm,
-                  deleting && { opacity: 0.6 },
-                ]}
-                onPress={handleDelete}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <ThemedText style={styles.deleteText}>
-                    {confirmDelete ? 'Confirm Delete' : 'Delete'}
-                  </ThemedText>
-                )}
-              </Pressable>
-            ) : (
-              <View />
-            )}
+            <Pressable
+              style={[
+                styles.deleteButton,
+                confirmDelete && styles.deleteButtonConfirm,
+                deleting && { opacity: 0.6 },
+              ]}
+              onPress={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <ThemedText style={styles.deleteText}>
+                  {confirmDelete ? 'Confirm Delete' : 'Delete'}
+                </ThemedText>
+              )}
+            </Pressable>
 
             <View style={styles.rightActions}>
               <Pressable style={styles.cancelButton} onPress={handleClose}>
@@ -222,18 +200,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#27272a',
   },
-  title: {
-    color: '#e4e4e7',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 20,
-  },
   fieldLabel: {
     color: '#a1a1aa',
     fontSize: 13,
     fontWeight: '500',
     marginBottom: 6,
     marginTop: 12,
+    marginLeft: CONTENT_LEFT_INSET,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e4e4e7',
   },
   input: {
     backgroundColor: '#09090b',
@@ -244,16 +222,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: '#e4e4e7',
     fontSize: 14,
-  },
-  inputReadonly: {
-    opacity: 0.85,
-    color: '#a1a1aa',
-  },
-  hint: {
-    color: '#71717a',
-    fontSize: 12,
-    marginTop: 8,
-    lineHeight: 18,
   },
   chipRow: {
     flexDirection: 'row',

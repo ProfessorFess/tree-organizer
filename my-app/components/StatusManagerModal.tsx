@@ -16,6 +16,7 @@ type StatusManagerModalProps = {
 
 const MAX_STATUS_LABEL_LENGTH = 30;
 const DEFAULT_STATUS_KEY = 'active';
+const CONTENT_LEFT_INSET = 2;
 const COLOR_PRESETS = [
   '#3b82f6',
   '#2563eb',
@@ -162,10 +163,14 @@ export function StatusManagerModal({
             ))}
           </View>
 
-          <ThemedText style={styles.fieldLabel}>{editingStatus ? 'Edit status' : 'New status'}</ThemedText>
+          <ThemedText
+            style={[styles.fieldLabel, !editingStatus && styles.newStatusLabel]}
+          >
+            {editingStatus ? 'Edit status' : 'New Status'}
+          </ThemedText>
           <TextInput
             style={styles.input}
-            placeholder="Status name"
+            placeholder="Status Name"
             placeholderTextColor="#71717a"
             value={draftLabel}
             onChangeText={setDraftLabel}
@@ -222,6 +227,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 14,
+    marginLeft: CONTENT_LEFT_INSET,
   },
   legendWrap: {
     flexDirection: 'row',
@@ -269,6 +275,12 @@ const styles = StyleSheet.create({
     color: '#a1a1aa',
     fontSize: 13,
     marginBottom: 6,
+    marginLeft: CONTENT_LEFT_INSET,
+  },
+  newStatusLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e4e4e7',
   },
   input: {
     backgroundColor: '#09090b',
@@ -281,11 +293,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   colorRow: {
+    width: '100%',
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: 8,
-    marginTop: 10,
+    marginTop: 12,
   },
   colorChip: {
     width: 22,
@@ -306,7 +320,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 10,
-    marginTop: 16,
+    marginTop: 18,
   },
   cancelButton: {
     paddingHorizontal: 16,
