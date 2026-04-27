@@ -233,14 +233,9 @@ export function TreeNode({
       onPointerLeave={() => onHoverChange(null)}
     >
       {isProjectRoot ? (
-        <Pressable
-          style={circleStyle as any}
-          onPress={() => onNodePress(node)}
-          onPressIn={() => setPressed(true)}
-          onPressOut={() => setPressed(false)}
-        >
+        <View style={circleStyle as any}>
           {circleInner}
-        </Pressable>
+        </View>
       ) : panGesture ? (
         <GestureDetector gesture={panGesture}>
           <Animated.View style={circleStyle as any}>{circleInner}</Animated.View>
@@ -269,7 +264,7 @@ export function TreeNode({
             <MaterialIcons
               name="add"
               size={PLUS_ICON}
-              color={pressed ? '#d4d4d8' : '#9ca3af'}
+              color={pressed ? '#ffffff' : '#e4e4e7'}
             />
           )}
         </Pressable>
@@ -288,7 +283,7 @@ export function TreeNode({
             <MaterialIcons
               name="add"
               size={PLUS_ICON}
-              color={pressed ? '#d4d4d8' : '#9ca3af'}
+              color={pressed ? '#ffffff' : '#e4e4e7'}
             />
           )}
         </Pressable>
@@ -307,7 +302,7 @@ export function TreeNode({
             <MaterialIcons
               name="add"
               size={PLUS_ICON}
-              color={pressed ? '#d4d4d8' : '#9ca3af'}
+              color={pressed ? '#ffffff' : '#e4e4e7'}
             />
           )}
         </Pressable>
@@ -326,7 +321,7 @@ export function TreeNode({
             <MaterialIcons
               name="add"
               size={PLUS_ICON}
-              color={pressed ? '#d4d4d8' : '#9ca3af'}
+              color={pressed ? '#ffffff' : '#e4e4e7'}
             />
           )}
         </Pressable>

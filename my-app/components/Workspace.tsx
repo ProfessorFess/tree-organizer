@@ -635,7 +635,7 @@ export function Workspace({
       </View>
 
       <Pressable style={styles.fab} onPress={onManageStatuses}>
-        <MaterialIcons name="add" size={20} color="#a1a1aa" />
+        <MaterialIcons name="add" size={20} color="#e4e4e7" />
       </Pressable>
     </View>
   );
