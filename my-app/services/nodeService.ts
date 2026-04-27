@@ -15,7 +15,7 @@ export const nodeService = {
     return data as Node[];
   },
 
-  // Create a new node (e.g., adding a team member)
+  // Create a new node
   async createNode(newNode: Partial<Node>) {
     const { data, error } = await supabase
       .from('nodes')
@@ -178,11 +178,10 @@ export const nodeService = {
   /**
    * Reparent then apply sibling order so layout matches drop intent (between / first / last / below).
    *
-   * **Below** (parent↔child drop circle): insert between parent and their existing child row — the
+   * Below: insert between parent and their existing child row — the
    * dragged node becomes the new direct child of the parent, and the parent’s *previous* direct
    * children (except the one being moved) are reparented under the dragged node, preserving
-   * their order. Example: Team2 had Member1; drag Test into the slot under Team2 → Team2 → Test
-   * → Member1.
+   * their order.
    */
   async reparentWithSiblingPlacement(
     movingId: string,

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Platform } from 'react-native';
 import { TopBar } from '../components/TopBar';
 import { Sidebar } from '../components/Sidebar';
 import { Workspace } from '../components/Workspace';
@@ -12,6 +12,13 @@ import type { CreateIntent } from '../types/createIntent';
 import { getRootNode } from '../lib/tree';
 
 const PROJECT_ID = 'dde69e85-3148-4a77-9ade-49036075a699';
+const bodyDotBackground = Platform.select({
+  web: {
+    backgroundImage: 'radial-gradient(circle, #333 1px, transparent 1px)',
+    backgroundSize: '24px 24px',
+  } as any,
+  default: {},
+});
 
 export default function HomeScreen() {
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -139,7 +146,7 @@ export default function HomeScreen() {
         onProjectNameCommit={handleProjectNameCommit}
       />
 
-      <View style={styles.body}>
+      <View style={[styles.body, bodyDotBackground]}>
         <Sidebar
           nodes={nodes}
           projectName={projectName}

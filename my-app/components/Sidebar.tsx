@@ -33,6 +33,9 @@ export function Sidebar({ nodes, projectName, rootNodeId, isOpen, onToggle }: Si
     width: withTiming(isOpen ? SIDEBAR_WIDTH : 0, { duration: 250 }),
     overflow: 'hidden' as const,
   }));
+  const toggleAnimatedStyle = useAnimatedStyle(() => ({
+    left: withTiming(isOpen ? SIDEBAR_WIDTH - 44 : 10, { duration: 250 }),
+  }));
 
   return (
     <View style={styles.wrapper}>
@@ -61,21 +64,25 @@ export function Sidebar({ nodes, projectName, rootNodeId, isOpen, onToggle }: Si
         </ScrollView>
       </Animated.View>
 
-      <Pressable style={styles.toggleButton} onPress={onToggle}>
-        <MaterialIcons
-          name={isOpen ? 'chevron-left' : 'chevron-right'}
-          size={20}
-          color="#a1a1aa"
-        />
-      </Pressable>
+      <Animated.View style={[styles.toggleButton, toggleAnimatedStyle]}>
+        <Pressable style={styles.toggleButtonPressable} onPress={onToggle}>
+          <MaterialIcons
+            name={isOpen ? 'chevron-left' : 'chevron-right'}
+            size={20}
+            color="#a1a1aa"
+          />
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    flexDirection: 'row',
+    position: 'relative',
     alignItems: 'flex-start',
+    overflow: 'visible',
+    zIndex: 10,
   },
   container: {
     backgroundColor: '#111113',
@@ -107,15 +114,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggleButton: {
-    width: 28,
-    height: 28,
+    position: 'absolute',
+    top: 10,
+    width: 34,
+    height: 34,
+    zIndex: 20,
+  },
+  toggleButtonPressable: {
+    width: '100%',
+    height: '100%',
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#3b82f6',
     backgroundColor: '#18181b',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    marginLeft: 4,
   },
 });

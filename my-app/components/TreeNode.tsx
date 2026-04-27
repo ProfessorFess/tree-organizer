@@ -185,7 +185,9 @@ export function TreeNode({
     onTreeDragBegin,
     onTreeDragMove,
     onTreeDragComplete,
+    onTreeDragClear,
     finalizePan,
+    didMove,
   ]);
 
   /** (+) centers sit on the cross through the node center; edges sit `g` px past the circle rim. */

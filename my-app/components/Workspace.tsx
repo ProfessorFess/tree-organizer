@@ -26,16 +26,13 @@ import { nodeService } from '../services/nodeService';
 
 /** Inner radius from node center: inside = swap with that node; outside = slots / no drop. */
 const SWAP_SNAP_PX = 22;
-/** Max radius for “below” child-drop circles (smallish). */
-const BELOW_SLOT_R_MAX = 14;
+/** Shared radius for all non-swap drag slot circles. */
+const DRAG_SLOT_R = 12;
 /** Min vertical gap (parent rim → child row) needed to show a below circle. */
 const BELOW_MIN_GAP = 20;
 /** Min horizontal gap between two sibling circles to place one between-slot. */
 const BETWEEN_MIN_GAP = 18;
-/** Max radius for between-sibling circles (fits in gap, no overlap). */
-const BETWEEN_SLOT_R_MAX = 12;
 /** End-cap circles: reparent as sibling of that row (same parent). */
-const OUTER_SLOT_R = 12;
 const OUTER_SLOT_OUTSET = 16;
 
 type SlotDef = {
@@ -84,13 +81,12 @@ function buildDragSlots(
       if (vGap >= BELOW_MIN_GAP) {
         const cx = pos.left + TREE_NODE_SIZE / 2;
         const cy = pos.top + TREE_NODE_SIZE + vGap / 2;
-        const r = Math.min(BELOW_SLOT_R_MAX, (vGap - 6) / 2);
-        if (r >= 6) {
+        if ((vGap - 6) / 2 >= DRAG_SLOT_R) {
           slots.push({
             key: `${n.id}:below`,
             cx,
             cy,
-            r,
+            r: DRAG_SLOT_R,
             reparentParentId: n.id,
             placement: { kind: 'below' },
           });
@@ -113,17 +109,16 @@ function buildDragSlots(
       if (!pa || !pb) continue;
       const hGap = pb.left - (pa.left + TREE_NODE_SIZE);
       if (hGap < BETWEEN_MIN_GAP) continue;
+      if (hGap / 2 - 2 < DRAG_SLOT_R) continue;
 
       const cx = (pa.left + TREE_NODE_SIZE + pb.left) / 2;
       const cy = pa.top + TREE_NODE_SIZE / 2;
-      const r = Math.min(BETWEEN_SLOT_R_MAX, hGap / 2 - 2);
-      if (r < 6) continue;
 
       slots.push({
         key: `between:${pid}:${a.id}:${b.id}`,
         cx,
         cy,
-        r,
+        r: DRAG_SLOT_R,
         reparentParentId: pid,
         placement: { kind: 'between', leftId: a.id, rightId: b.id },
       });
@@ -142,9 +137,9 @@ function buildDragSlots(
       if (pf) {
         slots.push({
           key: `outerL:${pid}:${first.id}`,
-          cx: pf.left - OUTER_SLOT_OUTSET - OUTER_SLOT_R,
+          cx: pf.left - OUTER_SLOT_OUTSET - DRAG_SLOT_R,
           cy: pf.top + TREE_NODE_SIZE / 2,
-          r: OUTER_SLOT_R,
+          r: DRAG_SLOT_R,
           reparentParentId: pid,
           placement: { kind: 'first' },
         });
@@ -155,9 +150,9 @@ function buildDragSlots(
       if (pl) {
         slots.push({
           key: `outerR:${pid}:${last.id}`,
-          cx: pl.left + TREE_NODE_SIZE + OUTER_SLOT_OUTSET + OUTER_SLOT_R,
+          cx: pl.left + TREE_NODE_SIZE + OUTER_SLOT_OUTSET + DRAG_SLOT_R,
           cy: pl.top + TREE_NODE_SIZE / 2,
-          r: OUTER_SLOT_R,
+          r: DRAG_SLOT_R,
           reparentParentId: pid,
           placement: { kind: 'last' },
         });
@@ -616,7 +611,7 @@ export function Workspace({
       </ScrollView>
 
       <Pressable style={styles.fab} onPress={() => onRequestCreate(fabIntent)}>
-        <MaterialIcons name="add" size={24} color="#fff" />
+        <MaterialIcons name="add" size={20} color="#a1a1aa" />
       </Pressable>
     </View>
   );
@@ -655,16 +650,16 @@ const styles = StyleSheet.create({
   } as any,
   fab: {
     position: 'absolute',
-    top: 14,
-    right: 14,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#3b82f6',
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 6,
+    backgroundColor: '#18181b',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#2563eb',
+    borderColor: '#3b82f6',
     zIndex: 20,
   },
 });
