@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,123 +8,121 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { ThemedText } from './themed-text';
-import { nodeService } from '../services/nodeService';
-import { Node } from '../types/database';
+import type { CreateIntent } from '../types/createIntent';
+import type { Node } from '../types/database';
 
-type NodeType = Node['node_type'];
 type NodeStatus = Node['status'];
 
-const NODE_TYPES: NodeType[] = ['ROOT', 'TEAM', 'PERSON'];
 const STATUSES: NodeStatus[] = ['active', 'stuck', 'completed'];
 
 type CreateNodeModalProps = {
-  visible: boolean;
-  projectId: string;
+  intent: CreateIntent | null;
+  defaultRootLabel: string;
   onClose: () => void;
-  onCreated: (node: Node) => void;
+  onSubmit: (
+    intent: CreateIntent,
+    data: { label: string; status: NodeStatus }
+  ) => Promise<void>;
 };
 
 export function CreateNodeModal({
-  visible,
-  projectId,
+  intent,
+  defaultRootLabel,
   onClose,
-  onCreated,
+  onSubmit,
 }: CreateNodeModalProps) {
   const [label, setLabel] = useState('');
-  const [nodeType, setNodeType] = useState<NodeType>('PERSON');
-  const [jobPosition, setJobPosition] = useState('');
   const [status, setStatus] = useState<NodeStatus>('active');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const resetForm = () => {
+  useEffect(() => {
+    if (intent) {
+      setLabel('');
+      setStatus('active');
+      setError(null);
+    }
+    setSubmitting(false);
+  }, [intent]);
+
+  const resetAndClose = () => {
     setLabel('');
-    setNodeType('PERSON');
-    setJobPosition('');
     setStatus('active');
     setError(null);
+    onClose();
   };
 
   const handleSubmit = async () => {
-    if (!label.trim()) {
+    if (!intent) return;
+
+    if (intent.kind === 'root') {
+      const name = label.trim() || defaultRootLabel.trim();
+      if (!name) {
+        setError('Add a name or use the project title');
+        return;
+      }
+    } else if (!label.trim()) {
       setError('Label is required');
       return;
     }
 
     setSubmitting(true);
     setError(null);
-
     try {
-      const newNode = await nodeService.createNode({
-        project_id: projectId,
-        label: label.trim(),
-        node_type: nodeType,
+      await onSubmit(intent, {
+        label:
+          intent.kind === 'root'
+            ? label.trim() || defaultRootLabel.trim()
+            : label.trim(),
         status,
-        job_position: jobPosition.trim() || undefined,
-        parent_node_id: null,
       });
-      resetForm();
-      onCreated(newNode);
+      resetAndClose();
     } catch (e: any) {
-      setError(e.message || 'Failed to create node');
+      setError(e.message || 'Failed to create');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
+  const title =
+    intent?.kind === 'root'
+      ? 'Create project root'
+      : intent?.kind === 'child'
+        ? 'Add child node'
+        : intent?.kind === 'sibling'
+          ? 'Add sibling node'
+          : intent?.kind === 'insertAbove'
+            ? 'Insert node above'
+            : '';
 
   return (
     <Modal
-      visible={visible}
+      visible={intent !== null}
       transparent
       animationType="fade"
-      onRequestClose={handleClose}
+      onRequestClose={resetAndClose}
     >
-      <Pressable style={styles.backdrop} onPress={handleClose}>
+      <Pressable style={styles.backdrop} onPress={resetAndClose}>
         <Pressable style={styles.card} onPress={() => {}}>
-          <ThemedText style={styles.title}>Create New Node</ThemedText>
+          <ThemedText style={styles.title}>{title}</ThemedText>
 
-          <ThemedText style={styles.fieldLabel}>Label *</ThemedText>
+          <ThemedText style={styles.fieldLabel}>
+            {intent?.kind === 'root' ? 'Name (project hub)' : 'Label *'}
+          </ThemedText>
           <TextInput
             style={styles.input}
             value={label}
             onChangeText={setLabel}
-            placeholder="e.g. John Doe"
+            placeholder={
+              intent?.kind === 'root' ? defaultRootLabel : 'e.g. Planning'
+            }
             placeholderTextColor="#71717a"
           />
-
-          <ThemedText style={styles.fieldLabel}>Type</ThemedText>
-          <View style={styles.chipRow}>
-            {NODE_TYPES.map((t) => (
-              <Pressable
-                key={t}
-                style={[styles.chip, nodeType === t && styles.chipActive]}
-                onPress={() => setNodeType(t)}
-              >
-                <ThemedText
-                  style={[
-                    styles.chipText,
-                    nodeType === t && styles.chipTextActive,
-                  ]}
-                >
-                  {t}
-                </ThemedText>
-              </Pressable>
-            ))}
-          </View>
-
-          <ThemedText style={styles.fieldLabel}>Job Position</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={jobPosition}
-            onChangeText={setJobPosition}
-            placeholder="e.g. Engineer"
-            placeholderTextColor="#71717a"
-          />
+          {intent?.kind === 'root' && (
+            <ThemedText style={styles.hint}>
+              Leave blank to use the title from the header. This node stays at the top of the tree.
+            </ThemedText>
+          )}
 
           <ThemedText style={styles.fieldLabel}>Status</ThemedText>
           <View style={styles.chipRow}>
@@ -149,13 +147,13 @@ export function CreateNodeModal({
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
           <View style={styles.actions}>
-            <Pressable style={styles.cancelButton} onPress={handleClose}>
+            <Pressable style={styles.cancelButton} onPress={resetAndClose}>
               <ThemedText style={styles.cancelText}>Cancel</ThemedText>
             </Pressable>
 
             <Pressable
               style={[styles.submitButton, submitting && { opacity: 0.6 }]}
-              onPress={handleSubmit}
+              onPress={() => void handleSubmit()}
               disabled={submitting}
             >
               {submitting ? (
@@ -236,6 +234,12 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontSize: 13,
     marginTop: 12,
+  },
+  hint: {
+    color: '#71717a',
+    fontSize: 12,
+    marginTop: 8,
+    lineHeight: 18,
   },
   actions: {
     flexDirection: 'row',
