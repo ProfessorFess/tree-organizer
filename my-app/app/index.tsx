@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { TopBar } from '../components/TopBar';
 import { Sidebar } from '../components/Sidebar';
 import { Workspace } from '../components/Workspace';
@@ -21,14 +21,21 @@ const bodyDotBackground = Platform.select({
 });
 
 export default function HomeScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const maxSidebarWidth = Math.max(120, Math.floor(windowWidth / 3));
   const [nodes, setNodes] = useState<Node[]>([]);
   const [projectName, setProjectName] = useState('Project');
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarWidth, setSidebarWidth] = useState(220);
   const [createIntent, setCreateIntent] = useState<CreateIntent | null>(null);
   const [editingNode, setEditingNode] = useState<Node | null>(null);
 
   const rootNode = useMemo(() => getRootNode(nodes), [nodes]);
+
+  useEffect(() => {
+    setSidebarWidth((prev) => Math.min(prev, maxSidebarWidth));
+  }, [maxSidebarWidth]);
 
   useEffect(() => {
     async function loadTree() {
@@ -151,6 +158,9 @@ export default function HomeScreen() {
           nodes={nodes}
           projectName={projectName}
           rootNodeId={rootNode?.id}
+          sidebarWidth={sidebarWidth}
+          maxSidebarWidth={maxSidebarWidth}
+          onSidebarWidthChange={setSidebarWidth}
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen((v) => !v)}
         />
