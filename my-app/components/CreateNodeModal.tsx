@@ -10,14 +10,14 @@ import {
 import { ThemedText } from './themed-text';
 import type { CreateIntent } from '../types/createIntent';
 import type { Node } from '../types/database';
+import type { StatusDefinition } from '../types/status';
 
 type NodeStatus = Node['status'];
-
-const STATUSES: NodeStatus[] = ['active', 'stuck', 'completed'];
 
 type CreateNodeModalProps = {
   intent: CreateIntent | null;
   defaultRootLabel: string;
+  statuses: StatusDefinition[];
   onClose: () => void;
   onSubmit: (
     intent: CreateIntent,
@@ -28,26 +28,27 @@ type CreateNodeModalProps = {
 export function CreateNodeModal({
   intent,
   defaultRootLabel,
+  statuses,
   onClose,
   onSubmit,
 }: CreateNodeModalProps) {
   const [label, setLabel] = useState('');
-  const [status, setStatus] = useState<NodeStatus>('active');
+  const [status, setStatus] = useState<NodeStatus>(statuses[0]?.key ?? 'active');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (intent) {
       setLabel('');
-      setStatus('active');
+      setStatus(statuses[0]?.key ?? 'active');
       setError(null);
     }
     setSubmitting(false);
-  }, [intent]);
+  }, [intent, statuses]);
 
   const resetAndClose = () => {
     setLabel('');
-    setStatus('active');
+    setStatus(statuses[0]?.key ?? 'active');
     setError(null);
     onClose();
   };
@@ -126,19 +127,20 @@ export function CreateNodeModal({
 
           <ThemedText style={styles.fieldLabel}>Status</ThemedText>
           <View style={styles.chipRow}>
-            {STATUSES.map((s) => (
+            {statuses.map((s) => (
               <Pressable
-                key={s}
-                style={[styles.chip, status === s && styles.chipActive]}
-                onPress={() => setStatus(s)}
+                key={s.key}
+                style={[styles.chip, status === s.key && styles.chipActive]}
+                onPress={() => setStatus(s.key)}
               >
+                <View style={[styles.statusSwatch, { backgroundColor: s.color }]} />
                 <ThemedText
                   style={[
                     styles.chipText,
-                    status === s && styles.chipTextActive,
+                    status === s.key && styles.chipTextActive,
                   ]}
                 >
-                  {s}
+                  {s.label}
                 </ThemedText>
               </Pressable>
             ))}
@@ -209,9 +211,13 @@ const styles = StyleSheet.create({
   },
   chipRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 6,
@@ -229,6 +235,11 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: '#60a5fa',
+  },
+  statusSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 3,
   },
   error: {
     color: '#ef4444',

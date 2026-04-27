@@ -9,6 +9,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { TreeNode, TreeAddDirection } from './TreeNode';
+import { ThemedText } from './themed-text';
 import { Node } from '../types/database';
 import {
   getRootNode,
@@ -22,6 +23,7 @@ import {
 } from '../lib/tree';
 import type { CreateIntent } from '../types/createIntent';
 import type { SiblingDropPlacement } from '../types/siblingDrop';
+import type { StatusDefinition } from '../types/status';
 import { nodeService } from '../services/nodeService';
 
 /** Inner radius from node center: inside = swap with that node; outside = slots / no drop. */
@@ -34,6 +36,7 @@ const BELOW_MIN_GAP = 20;
 const BETWEEN_MIN_GAP = 18;
 /** End-cap circles: reparent as sibling of that row (same parent). */
 const OUTER_SLOT_OUTSET = 16;
+const DEFAULT_STATUS_KEY = 'active';
 
 type SlotDef = {
   key: string;
@@ -307,18 +310,32 @@ function pointerToCanvasLayout(
 type WorkspaceProps = {
   nodes: Node[];
   projectName: string;
+  statuses: StatusDefinition[];
+  statusColorFor: (status: string) => string;
   onNodePress: (node: Node) => void;
   onRequestCreate: (intent: CreateIntent) => void;
+  onManageStatuses: () => void;
   onTreeReload: () => Promise<void>;
 };
 
 export function Workspace({
   nodes,
   projectName,
+  statuses,
+  statusColorFor,
   onNodePress,
   onRequestCreate,
+  onManageStatuses,
   onTreeReload,
 }: WorkspaceProps) {
+  const orderedLegendStatuses = useMemo(
+    () => [
+      ...statuses.filter((s) => s.key === DEFAULT_STATUS_KEY),
+      ...statuses.filter((s) => s.key !== DEFAULT_STATUS_KEY),
+    ],
+    [statuses]
+  );
+
   const [viewportWidth, setViewportWidth] = useState(0);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [drag, setDrag] = useState<{ id: string; dx: number; dy: number } | null>(null);
@@ -496,10 +513,6 @@ export function Workspace({
     }
   };
 
-  const fabIntent: CreateIntent = rootNode
-    ? { kind: 'child', parentId: rootNode.id }
-    : { kind: 'root' };
-
   const rootLayoutPos =
     rootNode && reachable.has(rootNode.id)
       ? positions.get(rootNode.id) ?? null
@@ -511,7 +524,7 @@ export function Workspace({
         horizontal
         style={styles.scroll}
         contentContainerStyle={{ minWidth: contentWidth }}
-        showsHorizontalScrollIndicator
+        showsHorizontalScrollIndicator={false}
       >
         <ScrollView
           style={{ flex: 1 }}
@@ -574,6 +587,7 @@ export function Workspace({
               onAddPress={handleTreeAdd}
               treeDragActive={treeDragActive}
               dragOffset={drag?.id === rootNode.id ? { dx: drag.dx, dy: drag.dy } : null}
+              statusColorFor={statusColorFor}
             />
           )}
 
@@ -603,6 +617,7 @@ export function Workspace({
                 onTreeDragMove={onTreeDragMove}
                 onTreeDragComplete={completeTreeDrag}
                 onTreeDragClear={onTreeDragClear}
+                statusColorFor={statusColorFor}
               />
             );
           })}
@@ -610,7 +625,16 @@ export function Workspace({
         </ScrollView>
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => onRequestCreate(fabIntent)}>
+      <View style={styles.legend}>
+        {orderedLegendStatuses.map((s) => (
+          <View key={s.key} style={styles.legendItem}>
+            <View style={[styles.legendSwatch, { backgroundColor: s.color }]} />
+            <ThemedText style={styles.legendLabel}>{s.label}</ThemedText>
+          </View>
+        ))}
+      </View>
+
+      <Pressable style={styles.fab} onPress={onManageStatuses}>
         <MaterialIcons name="add" size={20} color="#a1a1aa" />
       </Pressable>
     </View>
@@ -648,10 +672,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.55)',
   } as any,
+  legend: {
+    position: 'absolute',
+    right: 15,
+    bottom: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(9, 9, 11, 0.92)',
+    borderWidth: 1,
+    borderColor: '#18181b',
+    zIndex: 20,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  legendSwatch: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+  },
+  legendLabel: {
+    color: '#e4e4e7',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   fab: {
     position: 'absolute',
     top: 10,
-    right: 10,
+    right: 18,
     width: 34,
     height: 34,
     borderRadius: 6,

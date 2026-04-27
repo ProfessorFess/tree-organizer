@@ -10,15 +10,16 @@ import {
 import { ThemedText } from './themed-text';
 import { nodeService } from '../services/nodeService';
 import { Node } from '../types/database';
+import type { StatusDefinition } from '../types/status';
 
 type NodeStatus = Node['status'];
-
-const STATUSES: NodeStatus[] = ['active', 'stuck', 'completed'];
+const BASE_STATUS_KEYS = new Set(['active', 'stuck', 'completed']);
 
 type EditNodeModalProps = {
   node: Node | null;
   projectName: string;
   hubNodeId: string | null;
+  statuses: StatusDefinition[];
   onClose: () => void;
   onUpdated: (node: Node) => void;
   onDeleted: () => void;
@@ -28,12 +29,13 @@ export function EditNodeModal({
   node,
   projectName,
   hubNodeId,
+  statuses,
   onClose,
   onUpdated,
   onDeleted,
 }: EditNodeModalProps) {
   const [label, setLabel] = useState('');
-  const [status, setStatus] = useState<NodeStatus>('active');
+  const [status, setStatus] = useState<NodeStatus>(statuses[0]?.key ?? 'active');
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,12 +51,12 @@ export function EditNodeModal({
     }
     const hub = !!hubNodeId && node.id === hubNodeId;
     setLabel(hub ? projectName : node.label);
-    setStatus(node.status);
+    setStatus(node.status || statuses[0]?.key || 'active');
     setError(null);
     setConfirmDelete(false);
     setDeleting(false);
     setSubmitting(false);
-  }, [node, projectName, hubNodeId]);
+  }, [node, projectName, hubNodeId, statuses]);
 
   const handleSave = async () => {
     if (!node) return;
@@ -67,12 +69,14 @@ export function EditNodeModal({
     setError(null);
 
     try {
-      const payload: Partial<Omit<Node, 'id' | 'project_id'>> = { status };
+      const payload: Partial<Omit<Node, 'id' | 'project_id'>> = {
+        status: (BASE_STATUS_KEYS.has(status) ? status : 'active') as NodeStatus,
+      };
       if (!isRoot) {
         payload.label = label.trim();
       }
       const updated = await nodeService.updateNode(node.id, payload);
-      onUpdated(updated);
+      onUpdated({ ...updated, status });
     } catch (e: any) {
       setError(e.message || 'Failed to save changes');
     } finally {
@@ -138,16 +142,17 @@ export function EditNodeModal({
 
           <ThemedText style={styles.fieldLabel}>Status</ThemedText>
           <View style={styles.chipRow}>
-            {STATUSES.map((s) => (
+            {statuses.map((s) => (
               <Pressable
-                key={s}
-                style={[styles.chip, status === s && styles.chipActive]}
-                onPress={() => setStatus(s)}
+                key={s.key}
+                style={[styles.chip, status === s.key && styles.chipActive]}
+                onPress={() => setStatus(s.key)}
               >
+                <View style={[styles.statusSwatch, { backgroundColor: s.color }]} />
                 <ThemedText
-                  style={[styles.chipText, status === s && styles.chipTextActive]}
+                  style={[styles.chipText, status === s.key && styles.chipTextActive]}
                 >
-                  {s}
+                  {s.label}
                 </ThemedText>
               </Pressable>
             ))}
@@ -252,9 +257,13 @@ const styles = StyleSheet.create({
   },
   chipRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 6,
@@ -272,6 +281,11 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: '#60a5fa',
+  },
+  statusSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 3,
   },
   error: {
     color: '#ef4444',

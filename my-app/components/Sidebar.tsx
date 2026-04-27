@@ -1,25 +1,42 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View, Pressable, ScrollView } from 'react-native';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   withTiming,
 } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from './themed-text';
 import { Node } from '../types/database';
 import { flattenTreePreOrder, getRootNode } from '../lib/tree';
 
-const SIDEBAR_WIDTH = 220;
+const MIN_SIDEBAR_WIDTH = 180;
 
 type SidebarProps = {
   nodes: Node[];
   projectName: string;
   rootNodeId?: string;
+  statusColorFor: (status: string) => string;
+  sidebarWidth: number;
+  maxSidebarWidth: number;
+  onSidebarWidthChange: (width: number) => void;
   isOpen: boolean;
   onToggle: () => void;
 };
 
-export function Sidebar({ nodes, projectName, rootNodeId, isOpen, onToggle }: SidebarProps) {
+export function Sidebar({
+  nodes,
+  projectName,
+  rootNodeId,
+  statusColorFor,
+  sidebarWidth,
+  maxSidebarWidth,
+  onSidebarWidthChange,
+  isOpen,
+  onToggle,
+}: SidebarProps) {
+  const [isResizing, setIsResizing] = useState(false);
   const orderedNodes = useMemo(() => {
     const root =
       (rootNodeId ? nodes.find((n) => n.id === rootNodeId) : null) ?? getRootNode(nodes);
@@ -29,16 +46,62 @@ export function Sidebar({ nodes, projectName, rootNodeId, isOpen, onToggle }: Si
     const rest = nodes.filter((n) => !seen.has(n.id));
     return [...ordered, ...rest];
   }, [nodes, rootNodeId]);
+
+  const applySidebarWidth = useCallback(
+    (width: number) => {
+      const effectiveMin = Math.min(MIN_SIDEBAR_WIDTH, maxSidebarWidth);
+      const clamped = Math.max(effectiveMin, Math.min(maxSidebarWidth, width));
+      onSidebarWidthChange(clamped);
+    },
+    [maxSidebarWidth, onSidebarWidthChange]
+  );
+
+  const wrapperRef = useRef<View | null>(null);
+  const wrapperWindowXRef = useRef(0);
+  const refreshWrapperWindowX = useCallback(() => {
+    wrapperRef.current?.measureInWindow((x) => {
+      wrapperWindowXRef.current = x;
+    });
+  }, []);
+
+  const resizeGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(isOpen)
+        .onBegin(() => {
+          'worklet';
+          runOnJS(setIsResizing)(true);
+          runOnJS(refreshWrapperWindowX)();
+        })
+        .onUpdate((e) => {
+          'worklet';
+          runOnJS(applySidebarWidth)(e.absoluteX - wrapperWindowXRef.current);
+        })
+        .onFinalize(() => {
+          'worklet';
+          runOnJS(setIsResizing)(false);
+        }),
+    [applySidebarWidth, isOpen, refreshWrapperWindowX]
+  );
+
   const animatedStyle = useAnimatedStyle(() => ({
-    width: withTiming(isOpen ? SIDEBAR_WIDTH : 0, { duration: 250 }),
+    width: isOpen
+      ? isResizing
+        ? sidebarWidth
+        : withTiming(sidebarWidth, { duration: 250 })
+      : withTiming(0, { duration: 250 }),
     overflow: 'hidden' as const,
   }));
   const toggleAnimatedStyle = useAnimatedStyle(() => ({
-    left: withTiming(isOpen ? SIDEBAR_WIDTH - 44 : 10, { duration: 250 }),
+    left: isOpen
+      ? isResizing
+        ? sidebarWidth - 46
+        : withTiming(sidebarWidth - 46, { duration: 250 })
+      : withTiming(17, { duration: 250 }),
   }));
 
   return (
-    <View style={styles.wrapper}>
+    <View ref={wrapperRef} style={styles.wrapper}>
       <Animated.View style={[styles.container, animatedStyle]}>
         <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
           {orderedNodes.map((node) => (
@@ -47,12 +110,7 @@ export function Sidebar({ nodes, projectName, rootNodeId, isOpen, onToggle }: Si
                 style={[
                   styles.statusDot,
                   {
-                    backgroundColor:
-                      node.status === 'stuck'
-                        ? '#ef4444'
-                        : node.status === 'completed'
-                        ? '#3b82f6'
-                        : '#10b981',
+                    backgroundColor: statusColorFor(node.status),
                   },
                 ]}
               />
@@ -63,6 +121,11 @@ export function Sidebar({ nodes, projectName, rootNodeId, isOpen, onToggle }: Si
           ))}
         </ScrollView>
       </Animated.View>
+      {isOpen && (
+        <GestureDetector gesture={resizeGesture}>
+          <View style={styles.resizeHandle} />
+        </GestureDetector>
+      )}
 
       <Animated.View style={[styles.toggleButton, toggleAnimatedStyle]}>
         <Pressable style={styles.toggleButtonPressable} onPress={onToggle}>
@@ -130,4 +193,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  resizeHandle: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: -4,
+    width: 10,
+    zIndex: 15,
+    cursor: 'col-resize',
+  } as any,
 });
