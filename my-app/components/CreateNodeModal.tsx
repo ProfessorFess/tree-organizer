@@ -13,6 +13,7 @@ import type { Node } from '../types/database';
 import type { StatusDefinition } from '../types/status';
 
 type NodeStatus = Node['status'];
+const CONTENT_LEFT_INSET = 2;
 
 type CreateNodeModalProps = {
   intent: CreateIntent | null;
@@ -85,17 +86,6 @@ export function CreateNodeModal({
     }
   };
 
-  const title =
-    intent?.kind === 'root'
-      ? 'Create project root'
-      : intent?.kind === 'child'
-        ? 'Add child node'
-        : intent?.kind === 'sibling'
-          ? 'Add sibling node'
-          : intent?.kind === 'insertAbove'
-            ? 'Insert node above'
-            : '';
-
   return (
     <Modal
       visible={intent !== null}
@@ -105,27 +95,16 @@ export function CreateNodeModal({
     >
       <Pressable style={styles.backdrop} onPress={resetAndClose}>
         <Pressable style={styles.card} onPress={() => {}}>
-          <ThemedText style={styles.title}>{title}</ThemedText>
-
-          <ThemedText style={styles.fieldLabel}>
-            {intent?.kind === 'root' ? 'Name (project hub)' : 'Label *'}
-          </ThemedText>
+          <ThemedText style={[styles.fieldLabel, styles.sectionLabel]}>Node Name</ThemedText>
           <TextInput
             style={styles.input}
             value={label}
             onChangeText={setLabel}
-            placeholder={
-              intent?.kind === 'root' ? defaultRootLabel : 'e.g. Planning'
-            }
+            placeholder={intent?.kind === 'root' ? defaultRootLabel : 'e.g. Planning'}
             placeholderTextColor="#71717a"
           />
-          {intent?.kind === 'root' && (
-            <ThemedText style={styles.hint}>
-              Leave blank to use the title from the header. This node stays at the top of the tree.
-            </ThemedText>
-          )}
 
-          <ThemedText style={styles.fieldLabel}>Status</ThemedText>
+          <ThemedText style={[styles.fieldLabel, styles.sectionLabel]}>Status</ThemedText>
           <View style={styles.chipRow}>
             {statuses.map((s) => (
               <Pressable
@@ -149,21 +128,24 @@ export function CreateNodeModal({
           {error && <ThemedText style={styles.error}>{error}</ThemedText>}
 
           <View style={styles.actions}>
-            <Pressable style={styles.cancelButton} onPress={resetAndClose}>
-              <ThemedText style={styles.cancelText}>Cancel</ThemedText>
-            </Pressable>
+            <View />
+            <View style={styles.rightActions}>
+              <Pressable style={styles.cancelButton} onPress={resetAndClose}>
+                <ThemedText style={styles.cancelText}>Cancel</ThemedText>
+              </Pressable>
 
-            <Pressable
-              style={[styles.submitButton, submitting && { opacity: 0.6 }]}
-              onPress={() => void handleSubmit()}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <ThemedText style={styles.submitText}>Create</ThemedText>
-              )}
-            </Pressable>
+              <Pressable
+                style={[styles.submitButton, submitting && { opacity: 0.6 }]}
+                onPress={() => void handleSubmit()}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ThemedText style={styles.submitText}>Create</ThemedText>
+                )}
+              </Pressable>
+            </View>
           </View>
         </Pressable>
       </Pressable>
@@ -186,18 +168,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#27272a',
   },
-  title: {
-    color: '#e4e4e7',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 20,
-  },
   fieldLabel: {
     color: '#a1a1aa',
     fontSize: 13,
     fontWeight: '500',
     marginBottom: 6,
     marginTop: 12,
+    marginLeft: CONTENT_LEFT_INSET,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#e4e4e7',
   },
   input: {
     backgroundColor: '#09090b',
@@ -246,17 +228,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 12,
   },
-  hint: {
-    color: '#71717a',
-    fontSize: 12,
-    marginTop: 8,
-    lineHeight: 18,
-  },
   actions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: 10,
     marginTop: 24,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    gap: 10,
   },
   cancelButton: {
     paddingHorizontal: 16,
